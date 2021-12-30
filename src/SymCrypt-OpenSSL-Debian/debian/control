@@ -1,9 +1,24 @@
-Package: symcrypt-openssl
-Version: 0.1
-Section: devel
+Source: symcrypt-openssl
+Section: libdevel
 Priority: optional
-Architecture: all
+Maintainer: SONiC <sonic@microsoft.com>
+Build-Depends: debhelper (>= 9)
+
+Package: symcrypt-openssl
+Section: libdevel
+Priority: optional
+Architecture: any
 Depends: 
 Maintainer: SONiC <sonic@microsoft.com>
+Description: symcrypt openssl
+ Symcrypt Openssl Engine.
+
+Package: symcrypt-openssl-dbg
+Section: libdevel
+Architecture: any
+Priority: extra
+Depends:
+Maintainer: SONiC <sonic@microsoft.com>
+Build-Depends: debhelper (>= 9)
 Description: symcrypt openssl
  Symcrypt Openssl Engine.

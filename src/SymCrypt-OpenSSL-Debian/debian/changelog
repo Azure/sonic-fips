@@ -1,0 +1,5 @@
+symcrypt-openssl (0.1) bullseye; urgency=medium
+
+  * Init the SymCrypt-OpenSSL package
+
+ -- Xuhui Miao <xumia@microsoft.com>  Mon, 27 Dec 2021 17:43:39 +0100

@@ -1,0 +1,64 @@
+#!/usr/bin/make -f
+
+.ONESHELL:
+SHELL = /bin/bash
+.SHELLFLAGS += -e
+
+ARCH ?= amd64
+CMAKE_ARCH = AMD64
+LIB_INSTALL_NAME = x86_64-linux-gnu
+ifeq ($(ARCH), arm64)
+CMAKE_ARCH = ARM64
+LIB_INSTALL_NAME = aarch64-linux-gnu
+else ifeq ($(ARCH), armhf)
+CMAKE_ARCH = ARMHF
+LIB_INSTALL_NAME = arm-linux-gnueabihf 
+endif
+
+pn = symcrypt-openssl
+pn_dbg = $(pn)-dbg
+
+
+DEST ?= ../../target
+#LIBSYMCRYPT = $(DEST)/libsymcrypt.so
+#LIBSYMCRYPTENGINE = $(DEST)/libsymcryptengine.so
+
+LIBSYMCRYPT = bin_sym/module/$(CMAKE_ARCH)/LinuxUserMode/generic_linux/libsymcrypt.so
+LIBSYMCRYPTENGINE = bin_eng/SymCryptEngine/dynamic/libsymcryptengine.so
+
+clean:
+	rm bin_* -rf
+	rm debian/symcrypt-openssl -rf
+	rm debian/symcrypt-openssl-dbg -rf
+
+$(LIBSYMCRYPT):
+	mkdir -p bin_sym
+	cd bin_sym
+	cmake -DCMAKE_BUILD_TYPE=Release ../../SymCrypt -DCMAKE_TOOLCHAIN_FILE=../../SymCrypt/cmake-toolchain/LinuxUserMode-$(CMAKE_ARCH).cmake
+	cmake --build .
+
+$(LIBSYMCRYPTENGINE): $(LIBSYMCRYPT)
+	cp $(LIBSYMCRYPT) ../SymCrypt-OpenSSL/
+	ln -sf $(shell pwd)/../SymCrypt ~/SymCrypt
+	mkdir -p bin_eng
+	cd bin_eng
+	cmake ../../SymCrypt-OpenSSL -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=../../SymCrypt-OpenSSL/cmake-toolchain/LinuxUserMode-$(CMAKE_ARCH).cmake
+	cmake --build .
+
+build: $(LIBSYMCRYPTENGINE)
+	mkdir -p debian/symcrypt-openssl/usr/lib/$(LIB_INSTALL_NAME)
+	mkdir -p debian/symcrypt-openssl/usr/lib/ssl
+	cp $(LIBSYMCRYPT) $(LIBSYMCRYPTENGINE) debian/symcrypt-openssl/usr/lib/$(LIB_INSTALL_NAME)/
+	chmod 644 debian/symcrypt-openssl/usr/lib/$(LIB_INSTALL_NAME)/*
+	cp openssl.cnf debian/symcrypt-openssl/usr/lib/ssl/symcrypt-openssl.cnf
+
+install: build
+	dh_installdeb
+
+binary-arch: build install
+	# Exclude to strip the libsymcrypt.so, core dump error if stripped
+	dh_strip -a -N$(pn_dbg) -Xlibsymcrypt.so -Xdebug -Xdbg --dbg-package=$(pn_dbg)
+
+binary: binary-arch
+	dh_gencontrol
+	dh_builddeb

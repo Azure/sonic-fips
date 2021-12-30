@@ -16,9 +16,9 @@ case "$1" in
     ;;
 esac
 
-if [ -f "/usr/lib/ssl/openssl.cnf" ]; then
+if [ -f "/usr/lib/ssl/openssl.cnf" ] && ! grep -q symcryptengine /usr/lib/ssl/openssl.cnf; then
     echo "Move to the old /usr/lib/ssl/openssl.cnf to /usr/lib/ssl/openssl.cnf.bk"
     mv -f /usr/lib/ssl/openssl.cnf /usr/lib/ssl/openssl.cnf.bk
 fi
 
-mv -f /usr/lib/ssl/openssl-fips.cnf /usr/lib/ssl/openssl.cnf
+mv -f /usr/lib/ssl/symcrypt-openssl.cnf /usr/lib/ssl/openssl.cnf

@@ -1,0 +1,8 @@
+/*.debhelper*
+/*substvars
+/build-deb
+/build-udeb
+/files
+/tmp
+/symcrypt-openssl
+/symcrypt-openssl-dbg
