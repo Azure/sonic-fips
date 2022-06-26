@@ -1,0 +1,72 @@
+diff --git a/test/build.info b/test/build.info
+index bc3dae81f9..0c91cc297b 100644
+--- a/test/build.info
++++ b/test/build.info
+@@ -14,7 +14,7 @@ IF[{- !$disabled{tests} -}]
+           testutil/format_output.c testutil/tap_bio.c \
+           testutil/test_cleanup.c testutil/main.c testutil/testutil_init.c \
+           testutil/random.c
+-  INCLUDE[libtestutil.a]=../include
++  INCLUDE[libtestutil.a]=../include ../../SymCrypt-OpenSSL/SymCryptEngine/inc
+   DEPEND[libtestutil.a]=../libcrypto
+ 
+   # Special hack for descrip.mms to include the MAIN object module
+diff --git a/test/testutil/main.c b/test/testutil/main.c
+index d3ccdda391..82232733c8 100644
+--- a/test/testutil/main.c
++++ b/test/testutil/main.c
+@@ -11,6 +11,7 @@
+ #include "internal/nelem.h"
+ #include "output.h"
+ #include "tu_local.h"
++#include "scossl.h"
+ 
+ #include <string.h>
+ 
+@@ -47,6 +48,13 @@ int main(int argc, char *argv[])
+ 
+     setup_test_framework();
+ 
++    if (!SCOSSL_ENGINE_Initialize())
++    {
++        test_printf_stderr("SCOSSL init failed - aborting\n");
++        return ret;
++    }
++
++
+     if (setup_tests())
+         ret = run_tests(argv[0]);
+     cleanup_tests();
+diff --git a/engines/e_ossltest.c b/engines/e_ossltest.c
+index 64376247c3..70c8b62a68 100644
+--- a/engines/e_ossltest.c
++++ b/engines/e_ossltest.c
+@@ -319,6 +319,10 @@ static int bind_ossltest(ENGINE *e)
+         return 0;
+     }
+ 
++    ENGINE* scossl = ENGINE_by_id("symcrypt");
++    ENGINE_unregister_pkey_meths(scossl);
++    ENGINE_free(scossl);
++
+     return 1;
+ }
+ 
+diff --git a/crypto/engine/eng_all.c b/crypto/engine/eng_all.c
+index b675ed7892..67240e8a20 100644
+--- a/crypto/engine/eng_all.c
++++ b/crypto/engine/eng_all.c
+@@ -10,6 +10,13 @@
+ #include "internal/cryptlib.h"
+ #include "eng_local.h"
+ 
++__attribute__((constructor))
++void ENGINE_static_initializer(void)
++{
++    OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_DYNAMIC, NULL);
++}
++
++
+ void ENGINE_load_builtin_engines(void)
+ {
+     /* Some ENGINEs need this */

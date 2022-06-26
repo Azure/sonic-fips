@@ -1,0 +1,3 @@
+20-support-fips-test.patch
+30-disable-some-evppkey-tests-for-fips.patch
+40-disable-test-cases-with-fips-enabled.patch

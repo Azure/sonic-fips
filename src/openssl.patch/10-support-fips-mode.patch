@@ -1,8 +1,76 @@
 diff --git a/crypto/init.c b/crypto/init.c
-index 1b0d523bea..af171bda16 100644
+index 1b0d523bea..31fbd42cd2 100644
 --- a/crypto/init.c
 +++ b/crypto/init.c
-@@ -612,6 +612,70 @@ void OPENSSL_cleanup(void)
+@@ -404,6 +404,67 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_engine_afalg)
+ # endif
+ #endif
+ 
++# ifndef OPENSSL_NO_SYMCRYPT_ENGINE
++static CRYPTO_ONCE engine_symcrypt = CRYPTO_ONCE_STATIC_INIT;
++DEFINE_RUN_ONCE_STATIC(ossl_init_engine_symcrypt)
++{
++    int ret = 0;
++
++    // Get the default engine directory from the environment - may be NULL
++    char* load_dir = ossl_safe_getenv("OPENSSL_ENGINES");
++
++    #ifdef ENGINESDIR
++    // Use the default engines directory, if defined
++    if(load_dir == NULL)
++    {
++            load_dir = ENGINESDIR;
++    }
++    #endif
++
++    ENGINE *dynamic = NULL;
++    ENGINE *symcrypt = NULL;
++
++    dynamic = ENGINE_by_id("dynamic");
++    if (!dynamic)
++        goto err;
++
++    // Add the engines directory to the list of directories to load from and specify that loading
++    // from the directory list is mandatory (via DIR_LOAD = 2). Otherwise OpenSSL will try to load
++    // the engine from the default ld search path, fail, and skip loading from the engines dir.
++    if (!ENGINE_ctrl_cmd_string(dynamic, "DIR_ADD", load_dir, 0))
++        goto err;
++    if (!ENGINE_ctrl_cmd_string(dynamic, "DIR_LOAD", "2", 0))
++        goto err;
++    if (!ENGINE_ctrl_cmd_string(dynamic, "SO_PATH", "symcryptengine.so", 0))
++        goto err;
++    if (!ENGINE_ctrl_cmd_string(dynamic, "ID", "symcrypt", 0))
++        goto err;
++    if (!ENGINE_ctrl_cmd_string(dynamic, "LIST_ADD", "2", 0))
++        goto err;
++    if (!ENGINE_ctrl_cmd_string(dynamic, "LOAD", NULL, 0))
++        goto err;
++
++    symcrypt = ENGINE_by_id("symcrypt");
++    if (!symcrypt)
++        goto err;
++
++    // Make SymCrypt the default engine for all algorithms
++    if (!ENGINE_set_default_string(symcrypt, "ALL"))
++        goto err;
++
++err:
++    ENGINE_free(symcrypt);
++    ENGINE_free(dynamic);
++
++#  ifdef OPENSSL_INIT_DEBUG
++    fprintf(stderr, "OPENSSL_INIT: ossl_init_engine_symcrypt: %d\n",
++        ret);
++#  endif
++
++    return ret;
++}
++# endif
++
+ #ifndef OPENSSL_NO_COMP
+ static CRYPTO_ONCE zlib = CRYPTO_ONCE_STATIC_INIT;
+ 
+@@ -612,6 +673,72 @@ void OPENSSL_cleanup(void)
      base_inited = 0;
  }
  
@@ -54,8 +122,10 @@ index 1b0d523bea..af171bda16 100644
 +    return enabled;
 +}
 +
-+// Check if fips is enabled
-+int ossl_fips_enabled(){
++// Init fips config
++static CRYPTO_ONCE fips_config = CRYPTO_ONCE_STATIC_INIT;
++DEFINE_RUN_ONCE_STATIC(ossl_init_fips_conf)
++{
 +    g_fips_mode_enabled = 0;
 +    if (ossl_fips_enabled_by_cmd() > 0){
 +        g_fips_mode_enabled = 1;
@@ -67,26 +137,30 @@ index 1b0d523bea..af171bda16 100644
 +        return 1;
 +    }
 +
-+    return 0;
++    return 1;
 +}
 +
  /*
   * If this function is called with a non NULL settings value then it must be
   * called prior to any threads making calls to any OpenSSL functions,
-@@ -625,6 +689,13 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
+@@ -723,9 +850,14 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
+             && !RUN_ONCE(&engine_rdrand, ossl_init_engine_rdrand))
          return 0;
-     }
- 
-+    if (g_fips_mode_enabled == -1) {
-+        int fips_enabled = ossl_fips_enabled();
-+        if (fips_enabled) {
-+            setenv("OPENSSL_CONF", FIPS_OPENSSL_CONFIG, 1);
-+        }
+ # endif
+-    if ((opts & OPENSSL_INIT_ENGINE_DYNAMIC)
+-            && !RUN_ONCE(&engine_dynamic, ossl_init_engine_dynamic))
+-        return 0;
++    if (opts & OPENSSL_INIT_ENGINE_DYNAMIC)
++    {
++        if (!RUN_ONCE(&engine_dynamic, ossl_init_engine_dynamic))
++            return 0;
++        RUN_ONCE(&fips_config, ossl_init_fips_conf);
++        if (g_fips_mode_enabled == 1)
++            RUN_ONCE(&engine_symcrypt, ossl_init_engine_symcrypt);
 +    }
-+
-     /*
-      * When the caller specifies OPENSSL_INIT_BASE_ONLY, that should be the
-      * *only* option specified.  With that option we return immediately after
+ # ifndef OPENSSL_NO_STATIC_ENGINE
+ #  if !defined(OPENSSL_NO_HW) && !defined(OPENSSL_NO_HW_PADLOCK)
+     if ((opts & OPENSSL_INIT_ENGINE_PADLOCK)
 diff --git a/crypto/o_fips.c b/crypto/o_fips.c
 index 050ea9c216..6e9ffdb1d9 100644
 --- a/crypto/o_fips.c
