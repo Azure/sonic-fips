@@ -1,0 +1,15 @@
+diff --git a/engines/e_ossltest.c b/engines/e_ossltest.c
+index 64376247c3..70c8b62a68 100644
+--- a/engines/e_ossltest.c
++++ b/engines/e_ossltest.c
+@@ -319,6 +319,10 @@ static int bind_ossltest(ENGINE *e)
+         return 0;
+     }
+ 
++    ENGINE* scossl = ENGINE_by_id("symcrypt");
++    ENGINE_unregister_pkey_meths(scossl);
++    ENGINE_free(scossl);
++
+     return 1;
+ }
+ 

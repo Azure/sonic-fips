@@ -5,7 +5,7 @@ SHELL = /bin/bash
 ARCH ?= amd64
 SRC_PATH = src
 RULES_PATH = rules
-TARGET_PATH = target
+TARGET_PATH ?= target
 ROOT := $(shell pwd)
 DEST = $(ROOT)/$(TARGET_PATH)
 

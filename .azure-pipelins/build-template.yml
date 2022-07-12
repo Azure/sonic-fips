@@ -62,8 +62,35 @@ jobs:
       set -ex
       sudo mkdir -p $HOME
       sudo pip3 install -r src/SymCrypt/scripts/requirements.txt
+      ARCH=${{ parameters.arch }} make symcrypt
+      sudo dpkg -i target/symcrypt-openssl*.deb
+    displayName: 'Build and install symcrypt'
+  - script: |
+      set -ex
+      ARCH=${{ parameters.arch }} make openssl
+      sudo dpkg -i target/libssl*.deb target/openssl*.deb
+    displayName: 'Build and install openssl'
+  - script: |
+      set -ex
+      sudo mkdir -p /etc/fips
+      echo 1 | sudo tee /etc/fips/fips_enable
+      openssl engine -v | grep -i symcrypt
+      pushd src/openssl
+      git clean -xdf
+      git checkout -- .
+      popd
+
+      ARCH=${{ parameters.arch }} TARGET_PATH=target-test make openssl
+      echo 0 | sudo tee /etc/fips/fips_enable
+    displayName: 'Test openssl with fips enabled'
+ 
+  - script: |
       ARCH=${{ parameters.arch }} make all
-    displayName: 'Build'
+    displayName: 'Build others'
   - publish: $(System.DefaultWorkingDirectory)/target
     artifact: fips-symcrypt-${{ parameters.arch }}
     displayName: "Archive packages"
+  - publish:  $(Build.ArtifactStagingDirectory)
+    condition: failed()
+    artifact: '$fips-symcrypt-${{ parameters.arch }}-(System.JobAttempt)'
+    displayName: "Archive failed packages"

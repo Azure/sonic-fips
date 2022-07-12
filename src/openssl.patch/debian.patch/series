@@ -3,3 +3,7 @@ Fix-file-operations-in-c_rehash.patch
 Update-expired-SCT-certificates.patch
 ct_test.c-Update-the-epoch-time.patch
 Update-further-expiring-certificates-that-affect-tests.patch
+20-support-fips-test.patch
+30-disable-some-evppkey-tests-for-fips.patch
+40-disable-test-cases-with-fips-enabled.patch
+50-disable-some-evpciph-test-for-fips.patch

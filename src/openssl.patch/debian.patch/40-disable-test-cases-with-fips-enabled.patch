@@ -1,0 +1,170 @@
+diff --git a/test/recipes/05-test_rand.t b/test/recipes/05-test_rand.t
+index 3ae254031c..95ebba15f0 100644
+--- a/test/recipes/05-test_rand.t
++++ b/test/recipes/05-test_rand.t
+@@ -10,8 +10,8 @@ use strict;
+ use warnings;
+ use OpenSSL::Test;
+ 
+-plan tests => 2;
++plan tests => 1;
+ setup("test_rand");
+ 
+-ok(run(test(["drbgtest"])));
++#ok(run(test(["drbgtest"])));
+ ok(run(test(["drbg_cavs_test"])));
+diff --git a/test/recipes/15-test_ecdsa.t b/test/recipes/15-test_ecdsa.t
+deleted file mode 100644
+index 82a85594c3..0000000000
+--- a/test/recipes/15-test_ecdsa.t
++++ /dev/null
+@@ -1,12 +0,0 @@
+-#! /usr/bin/env perl
+-# Copyright 2015-2016 The OpenSSL Project Authors. All Rights Reserved.
+-#
+-# Licensed under the OpenSSL license (the "License").  You may not use
+-# this file except in compliance with the License.  You can obtain a copy
+-# in the file LICENSE in the source distribution or at
+-# https://www.openssl.org/source/license.html
+-
+-
+-use OpenSSL::Test::Simple;
+-
+-simple_test("test_ecdsa", "ecdsatest", "ec");
+diff --git a/test/recipes/15-test_mp_rsa.t b/test/recipes/15-test_mp_rsa.t
+index 9271dba042..255bbbe240 100644
+--- a/test/recipes/15-test_mp_rsa.t
++++ b/test/recipes/15-test_mp_rsa.t
+@@ -17,9 +17,9 @@ use OpenSSL::Test::Utils;
+ 
+ setup("test_mp_rsa");
+ 
+-plan tests => 31;
++plan tests => 30;
+ 
+-ok(run(test(["rsa_mp_test"])), "running rsa multi prime test");
++#ok(run(test(["rsa_mp_test"])), "running rsa multi prime test");
+ 
+ my $cleartext = data_file("plain_text");
+ 
+diff --git a/test/recipes/30-test_engine.t b/test/recipes/30-test_engine.t
+deleted file mode 100644
+index 03c96cde09..0000000000
+--- a/test/recipes/30-test_engine.t
++++ /dev/null
+@@ -1,18 +0,0 @@
+-#! /usr/bin/env perl
+-# Copyright 2015-2016 The OpenSSL Project Authors. All Rights Reserved.
+-#
+-# Licensed under the OpenSSL license (the "License").  You may not use
+-# this file except in compliance with the License.  You can obtain a copy
+-# in the file LICENSE in the source distribution or at
+-# https://www.openssl.org/source/license.html
+-
+-
+-use strict;
+-use warnings;
+-
+-use OpenSSL::Test;
+-
+-setup("test_engine");
+-
+-plan tests => 1;
+-ok(run(test(["enginetest"])), "running enginetest");
+diff --git a/test/recipes/90-test_shlibload.t b/test/recipes/90-test_shlibload.t
+index 8372a61e88..383dd35581 100644
+--- a/test/recipes/90-test_shlibload.t
++++ b/test/recipes/90-test_shlibload.t
+@@ -23,7 +23,7 @@ plan skip_all => "Test is disabled on AIX" if config('target') =~ m|^aix|;
+ plan skip_all => "Test is disabled on VMS" if config('target') =~ m|^vms|;
+ plan skip_all => "Test only supported in a dso build" if disabled("dso");
+ 
+-plan tests => 10;
++plan tests => 4;
+ 
+ # When libssl and libcrypto are compiled on Linux with "-rpath", but not
+ # "--enable-new-dtags", the RPATH takes precedence over LD_LIBRARY_PATH,
+@@ -43,21 +43,21 @@ ok(run(test(["shlibloadtest", "-ssl_first", $libcrypto, $libssl, $filename])),
+    "running shlibloadtest -ssl_first $filename");
+ ok(check_atexit($fh));
+ unlink $filename;
+-($fh, $filename) = tempfile();
+-ok(run(test(["shlibloadtest", "-just_crypto", $libcrypto, $libssl, $filename])),
+-   "running shlibloadtest -just_crypto $filename");
+-ok(check_atexit($fh));
+-unlink $filename;
+-($fh, $filename) = tempfile();
+-ok(run(test(["shlibloadtest", "-dso_ref", $libcrypto, $libssl, $filename])),
+-   "running shlibloadtest -dso_ref $filename");
+-ok(check_atexit($fh));
+-unlink $filename;
+-($fh, $filename) = tempfile();
+-ok(run(test(["shlibloadtest", "-no_atexit", $libcrypto, $libssl, $filename])),
+-   "running shlibloadtest -no_atexit $filename");
+-ok(!check_atexit($fh));
+-unlink $filename;
++#($fh, $filename) = tempfile();
++#ok(run(test(["shlibloadtest", "-just_crypto", $libcrypto, $libssl, $filename])),
++#   "running shlibloadtest -just_crypto $filename");
++#ok(check_atexit($fh));
++#unlink $filename;
++#($fh, $filename) = tempfile();
++#ok(run(test(["shlibloadtest", "-dso_ref", $libcrypto, $libssl, $filename])),
++#   "running shlibloadtest -dso_ref $filename");
++#ok(check_atexit($fh));
++#unlink $filename;
++#($fh, $filename) = tempfile();
++#ok(run(test(["shlibloadtest", "-no_atexit", $libcrypto, $libssl, $filename])),
++#   "running shlibloadtest -no_atexit $filename");
++#ok(!check_atexit($fh));
++#unlink $filename;
+ 
+ sub shlib {
+     my $lib = shift;
+diff --git a/test/recipes/30-test_evp_extra.t b/test/recipes/30-test_evp_extra.t
+deleted file mode 100644
+index 9a656b0bcb..0000000000
+--- a/test/recipes/30-test_evp_extra.t
++++ /dev/null
+@@ -1,18 +0,0 @@
+-#! /usr/bin/env perl
+-# Copyright 2015-2016 The OpenSSL Project Authors. All Rights Reserved.
+-#
+-# Licensed under the OpenSSL license (the "License").  You may not use
+-# this file except in compliance with the License.  You can obtain a copy
+-# in the file LICENSE in the source distribution or at
+-# https://www.openssl.org/source/license.html
+-
+-
+-use strict;
+-use warnings;
+-
+-use OpenSSL::Test;
+-
+-setup("test_evp_extra");
+-
+-plan tests => 1;
+-ok(run(test(["evp_extra_test"])), "running evp_extra_test");
+diff --git a/test/recipes/90-test_includes.t b/test/recipes/90-test_includes.t
+index c6a86fc009..8db1d024f2 100644
+--- a/test/recipes/90-test_includes.t
++++ b/test/recipes/90-test_includes.t
+@@ -11,13 +11,13 @@ plan skip_all => "test_includes doesn't work without posix-io"
+     if disabled("posix-io");
+ 
+ plan tests =>                   # The number of tests being performed
+-    5
++    1
+     + ($^O eq "VMS" ? 2 : 0);
+ 
+-ok(run(test(["conf_include_test", data_file("includes.cnf")])), "test directory includes");
+-ok(run(test(["conf_include_test", data_file("includes-file.cnf")])), "test file includes");
+-ok(run(test(["conf_include_test", data_file("includes-eq.cnf")])), "test includes with equal character");
+-ok(run(test(["conf_include_test", data_file("includes-eq-ws.cnf")])), "test includes with equal and whitespaces");
++#ok(run(test(["conf_include_test", data_file("includes.cnf")])), "test directory includes");
++#ok(run(test(["conf_include_test", data_file("includes-file.cnf")])), "test file includes");
++#ok(run(test(["conf_include_test", data_file("includes-eq.cnf")])), "test includes with equal character");
++#ok(run(test(["conf_include_test", data_file("includes-eq-ws.cnf")])), "test includes with equal and whitespaces");
+ if ($^O eq "VMS") {
+     ok(run(test(["conf_include_test", data_file("vms-includes.cnf")])),
+        "test directory includes, VMS syntax");
