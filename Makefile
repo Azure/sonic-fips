@@ -1,7 +1,7 @@
 .ONESHELL:
 SHELL = /bin/bash
 .SHELLFLAGS += -e
-
+ 
 ARCH ?= amd64
 SRC_PATH = src
 RULES_PATH = rules
