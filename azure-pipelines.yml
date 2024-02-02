@@ -23,3 +23,8 @@ jobs:
   parameters:
     pool: sonicbld-arm64
     arch: arm64
+- template: .azure-pipelines/build-template.yml
+  parameters:
+    pool: sonicbld-armhf
+    arch: armhf
+    image: publicmirror.azurecr.io/azp-debian-armhf:bullseye
