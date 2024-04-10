@@ -6,7 +6,7 @@
 	url = https://github.com/microsoft/SymCrypt
 [submodule "src/SymCrypt-OpenSSL"]
 	path = src/SymCrypt-OpenSSL
-	url = https://github.com/microsoft/SymCrypt-OpenSSL
+	url = https://github.com/xumia/SymCrypt-OpenSSL
 [submodule "src/python3"]
 	path = src/python3
 	url = https://salsa.debian.org/cpython-team/python3

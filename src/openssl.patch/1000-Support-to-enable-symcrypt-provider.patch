@@ -1,67 +1,22 @@
-From e7e173cc99c0d8572f693bfd7b06b03f85dd3cdc Mon Sep 17 00:00:00 2001
+From 6c461dae53b557998b19b3c629cc0dfe865cbb48 Mon Sep 17 00:00:00 2001
 From: xumia <xumia@microsoft.com>
-Date: Mon, 5 Feb 2024 09:19:54 +0000
+Date: Mon, 8 Apr 2024 10:18:47 +0000
 Subject: [PATCH] Support to enable SymCrypt provider by SONIC_FIPS in kernel
- command line
 
 ---
- crypto/context.c | 62 +++++++++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 61 insertions(+), 1 deletion(-)
+ crypto/context.c | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/crypto/context.c b/crypto/context.c
-index 51002ba79a..36efa7cac0 100644
+index dbeb881b45..cc2a363cca 100644
 --- a/crypto/context.c
 +++ b/crypto/context.c
-@@ -22,6 +22,66 @@
+@@ -23,6 +23,20 @@
  # include <unistd.h>
  # include <openssl/evp.h>
  
-+#define BUZZ_SIZE 4096
-+#define PROC_CMDLINE "/proc/cmdline"
-+#define FIPS_ENABLE_CONF "/etc/fips/fips_enable"
-+// Check if the fips is enabled by command line
-+int ossl_fips_enabled_by_cmd(){
-+    int enabled = 0;
-+    FILE * fp = NULL;
-+    char buff[BUZZ_SIZE] = "";
-+    if((fp = fopen(PROC_CMDLINE, "r")) != NULL){
-+        fgets(buff, BUZZ_SIZE, fp);
-+        char * token = strtok(buff, " \n");
-+        while( token != NULL ) {
-+            if (strcmp(token, "fips=1") == 0){
-+                enabled = 1;
-+                break;
-+            }
-+            if (strcmp(token, "sonic_fips=1") == 0){
-+                enabled = 1;
-+                break;
-+            }
-+            token = strtok(NULL, " \n");
-+        }
-+
-+        fclose(fp);
-+    }
-+
-+    return enabled;
-+}
-+
-+// Check if fips is enabled by config
-+int ossl_fips_enabled_by_conf(){
-+    int enabled = 0;
-+    FILE * fp = NULL;
-+    char buff[BUZZ_SIZE] = "";
-+    if((fp = fopen(FIPS_ENABLE_CONF, "r")) != NULL ){
-+        fgets(buff, BUZZ_SIZE, fp);
-+        if (strlen(buff) > 0 && buff[0] == '1') {
-+            enabled = 1;
-+        }
-+
-+        fclose(fp);
-+    }
-+
-+    return enabled;
-+}
-+
++extern int ossl_fips_enabled_by_cmd();
++extern int ossl_fips_enabled_by_conf();
 +int oss_fips_enabled_check(){
 +    if (ossl_fips_enabled_by_cmd() > 0){
 +        return 1;
@@ -74,19 +29,17 @@ index 51002ba79a..36efa7cac0 100644
 +    return 0;
 +}
 +
-+
-+
  # define FIPS_MODE_SWITCH_FILE "/proc/sys/crypto/fips_enabled"
  
  static int kernel_fips_flag;
-@@ -38,7 +98,7 @@ static void read_kernel_fips_flag(void)
- 		close(fd);
- 	}
+@@ -39,7 +53,7 @@ static void read_kernel_fips_flag(void)
+                close(fd);
+        }
  
--	if (buf[0] == '1') {
-+	if (buf[0] == '1' || oss_fips_enabled_check() > 0) {
- 		kernel_fips_flag = 1;
- 	}
+-       if (buf[0] == '1') {
++       if (buf[0] == '1' || oss_fips_enabled_check() > 0) {
+                kernel_fips_flag = 1;
+        }
  
 -- 
 2.39.2

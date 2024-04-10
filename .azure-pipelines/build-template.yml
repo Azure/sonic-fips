@@ -71,17 +71,15 @@ jobs:
       sudo apt -y remove openssh-client || sudo apt -y --fix-broken install
       sudo dpkg -i target/libssl*.deb target/openssl*.deb
       openssl list --providers
+    condition: false
     displayName: 'Build and install openssl'
   - script: |
       set -ex
       sudo mkdir -p $HOME
       sudo pip3 install --break-system-packages -r src/SymCrypt/scripts/requirements.txt
       ARCH=${{ parameters.arch }} make symcrypt
-      if [ "${{ parameters.arch }}" != armhf ]; then
-        sudo dpkg -i target/symcrypt-openssl*.deb
-        openssl list --providers
-        openssl list --providers | grep -i symcrypt
-      fi
+      sudo dpkg -i target/symcrypt-openssl*.deb
+      openssl list --providers
     displayName: 'Build and install symcrypt'
   - script: |
       set -ex
@@ -95,11 +93,16 @@ jobs:
   - script: |
       set -ex
       sudo mkdir -p /etc/fips
-      echo 1 | sudo tee /etc/fips/fips_enable
+      export OPENSSL_CONF=/etc/ssl/openssl-fips.cnf
       openssl engine -v | grep -i symcrypt
       pushd src/openssl
       git clean -xdf
       git checkout -- .
+      echo "" > debian/patches/Remove-the-provider-section.patch
+      sed -i "/default = default_sect/a symcrypt = symcrypt_prov_sect" test/default.cnf apps/openssl.cnf
+      symcrypt_prov_sect=$(echo -e "[symcrypt_prov_sect]\nactivate = 1\nidentity = symcrypt\nmodule = symcryptprovider.so")
+      echo "$symcrypt_prov_sect" >> test/default.cnf
+      echo "$symcrypt_prov_sect" >> apps/openssl.cnf
       popd
 
       ARCH=${{ parameters.arch }} TARGET_PATH=target-test make openssl

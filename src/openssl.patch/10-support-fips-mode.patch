@@ -1,16 +1,18 @@
 diff --git a/crypto/init.c b/crypto/init.c
-index 983d76e457..7f103c5ad5 100644
+index cacf637c89..d8b99040d1 100644
 --- a/crypto/init.c
 +++ b/crypto/init.c
-@@ -341,6 +341,67 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_engine_afalg)
+@@ -341,6 +341,69 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_engine_afalg)
  # endif
  #endif
  
 +# ifndef OPENSSL_NO_SYMCRYPT_ENGINE
++static int symcrypt_inited = 0;
 +static CRYPTO_ONCE engine_symcrypt = CRYPTO_ONCE_STATIC_INIT;
 +DEFINE_RUN_ONCE_STATIC(ossl_init_engine_symcrypt)
 +{
 +    int ret = 0;
++    symcrypt_inited = 1;
 +
 +    // Get the default engine directory from the environment - may be NULL
 +    char* load_dir = ossl_safe_getenv("OPENSSL_ENGINES");
@@ -70,7 +72,7 @@ index 983d76e457..7f103c5ad5 100644
  void OPENSSL_cleanup(void)
  {
      OPENSSL_INIT_STOP *currhandler, *lasthandler;
-@@ -454,6 +515,72 @@ void OPENSSL_cleanup(void)
+@@ -454,6 +517,72 @@ void OPENSSL_cleanup(void)
      base_inited = 0;
  }
  
@@ -143,7 +145,7 @@ index 983d76e457..7f103c5ad5 100644
  /*
   * If this function is called with a non NULL settings value then it must be
   * called prior to any threads making calls to any OpenSSL functions,
-@@ -614,9 +741,14 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
+@@ -614,9 +743,14 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
              && !RUN_ONCE(&engine_rdrand, ossl_init_engine_rdrand))
          return 0;
  # endif
@@ -155,7 +157,7 @@ index 983d76e457..7f103c5ad5 100644
 +        if (!RUN_ONCE(&engine_dynamic, ossl_init_engine_dynamic))
 +            return 0;
 +        RUN_ONCE(&fips_config, ossl_init_fips_conf);
-+        if (g_fips_mode_enabled == 1)
++        if (g_fips_mode_enabled == 1 && symcrypt_inited == 0)
 +            RUN_ONCE(&engine_symcrypt, ossl_init_engine_symcrypt);
 +    }
  # ifndef OPENSSL_NO_STATIC_ENGINE

@@ -1,0 +1,183 @@
+diff --git a/crypto/init.c b/crypto/init.c
+index cacf637c89..e2c1a9cf25 100644
+--- a/crypto/init.c
++++ b/crypto/init.c
+@@ -33,6 +33,7 @@
+ #include <openssl/cmp_util.h> /* for OSSL_CMP_log_close() */
+ #include <openssl/trace.h>
+ #include "crypto/ctype.h"
++#include <openssl/provider.h>
+ 
+ static int stopped = 0;
+ static uint64_t optsdone = 0;
+@@ -49,6 +50,9 @@ static CRYPTO_RWLOCK *optsdone_lock = NULL;
+ /* Guards simultaneous INIT_LOAD_CONFIG calls with non-NULL settings */
+ static CRYPTO_RWLOCK *init_lock = NULL;
+ static CRYPTO_THREAD_LOCAL in_init_config_local;
++/* Guards SymCrypt engine/provider init re-entry */
++static CRYPTO_THREAD_LOCAL in_init_symcrypt_engine_local;
++static CRYPTO_THREAD_LOCAL in_init_symcrypt_provider_local;
+ 
+ static CRYPTO_ONCE base = CRYPTO_ONCE_STATIC_INIT;
+ static int base_inited = 0;
+@@ -70,7 +74,9 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_base)
+     if (!ossl_init_thread())
+         goto err;
+ 
+-    if (!CRYPTO_THREAD_init_local(&in_init_config_local, NULL))
++    if (!CRYPTO_THREAD_init_local(&in_init_config_local, NULL)
++            || !CRYPTO_THREAD_init_local(&in_init_symcrypt_engine_local, NULL)
++            || !CRYPTO_THREAD_init_local(&in_init_symcrypt_provider_local, NULL))
+         goto err;
+ 
+     base_inited = 1;
+@@ -277,6 +283,27 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_async)
+     return 1;
+ }
+ 
++static CRYPTO_ONCE provider_symcrypt = CRYPTO_ONCE_STATIC_INIT;
++DEFINE_RUN_ONCE_STATIC(ossl_init_provider_symcrypt)
++{
++    // Load config before checking if the provider is available
++    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL);
++
++    OSSL_LIB_CTX *default_ctx = OSSL_LIB_CTX_get0_global_default();
++    if (!OSSL_PROVIDER_available(default_ctx, "symcrypt")
++            && !OSSL_PROVIDER_available(default_ctx, "symcryptprovider")) {
++
++        OSSL_PROVIDER_load(default_ctx, "symcryptprovider");
++        EVP_set_default_properties(default_ctx, "?provider=symcryptprovider");
++
++        if (!OSSL_PROVIDER_available(default_ctx, "default")) {
++            OSSL_PROVIDER_load(default_ctx, "default");
++        }
++    }
++
++    return 1;
++}
++
+ #ifndef OPENSSL_NO_ENGINE
+ static CRYPTO_ONCE engine_openssl = CRYPTO_ONCE_STATIC_INIT;
+ DEFINE_RUN_ONCE_STATIC(ossl_init_engine_openssl)
+@@ -301,6 +328,64 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_engine_dynamic)
+     engine_load_dynamic_int();
+     return 1;
+ }
++# ifndef OPENSSL_NO_SYMCRYPT_ENGINE
++static CRYPTO_ONCE engine_symcrypt = CRYPTO_ONCE_STATIC_INIT;
++DEFINE_RUN_ONCE_STATIC(ossl_init_engine_symcrypt)
++{
++    int ret = 0;
++
++    // Get the default engine directory from the environment - may be NULL
++    char* load_dir = ossl_safe_getenv("OPENSSL_ENGINES");
++
++    #ifdef ENGINESDIR
++    // Use the default engines directory, if defined
++    if(load_dir == NULL)
++    {
++        load_dir = ENGINESDIR;
++    }
++    #endif
++
++    ENGINE *dynamic = NULL;
++    ENGINE *symcrypt = NULL;
++
++    dynamic = ENGINE_by_id("dynamic");
++    if (!dynamic)
++        goto err;
++
++    // Add the engines directory to the list of directories to load from and specify that loading
++    // from the directory list is mandatory (via DIR_LOAD = 2). Otherwise OpenSSL will try to load
++    // the engine from the default ld search path, fail, and skip loading from the engines dir.
++    if (!ENGINE_ctrl_cmd_string(dynamic, "DIR_ADD", load_dir, 0))
++        goto err;
++    if (!ENGINE_ctrl_cmd_string(dynamic, "DIR_LOAD", "2", 0))
++        goto err;
++    if (!ENGINE_ctrl_cmd_string(dynamic, "SO_PATH", "symcryptengine.so", 0))
++        goto err;
++    if (!ENGINE_ctrl_cmd_string(dynamic, "ID", "symcrypt", 0))
++        goto err;
++    if (!ENGINE_ctrl_cmd_string(dynamic, "LIST_ADD", "2", 0))
++        goto err;
++    if (!ENGINE_ctrl_cmd_string(dynamic, "LOAD", NULL, 0))
++        goto err;
++
++    symcrypt = ENGINE_by_id("symcrypt");
++    if (!symcrypt)
++        goto err;
++
++    ret = 1;
++err:
++    ENGINE_free(symcrypt);
++    ENGINE_free(dynamic);
++
++#  ifdef OPENSSL_INIT_DEBUG
++    fprintf(stderr, "OPENSSL_INIT: ossl_init_engine_symcrypt: %d\n",
++        ret);
++#  endif
++
++    return ret;
++}
++# endif
++
+ # ifndef OPENSSL_NO_STATIC_ENGINE
+ #  ifndef OPENSSL_NO_DEVCRYPTOENG
+ static CRYPTO_ONCE engine_devcrypto = CRYPTO_ONCE_STATIC_INIT;
+@@ -380,6 +465,8 @@ void OPENSSL_cleanup(void)
+     init_lock = NULL;
+ 
+     CRYPTO_THREAD_cleanup_local(&in_init_config_local);
++    CRYPTO_THREAD_cleanup_local(&in_init_symcrypt_engine_local);
++    CRYPTO_THREAD_cleanup_local(&in_init_symcrypt_provider_local);
+ 
+     /*
+      * We assume we are single-threaded for this function, i.e. no race
+@@ -614,9 +701,26 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
+             && !RUN_ONCE(&engine_rdrand, ossl_init_engine_rdrand))
+         return 0;
+ # endif
+-    if ((opts & OPENSSL_INIT_ENGINE_DYNAMIC)
+-            && !RUN_ONCE(&engine_dynamic, ossl_init_engine_dynamic))
+-        return 0;
++    if (opts & OPENSSL_INIT_ENGINE_DYNAMIC)
++    {
++        if (!RUN_ONCE(&engine_dynamic, ossl_init_engine_dynamic))
++            return 0;
++
++# ifndef OPENSSL_NO_SYMCRYPT_ENGINE
++        int in_symcrypt_engine_init = CRYPTO_THREAD_get_local(&in_init_symcrypt_engine_local) != NULL;
++
++        // Skip re-entry
++        if (!in_symcrypt_engine_init) {
++            if (!CRYPTO_THREAD_set_local(&in_init_symcrypt_engine_local, (void *)-1))
++                return 0;
++
++            if (!RUN_ONCE(&engine_symcrypt, ossl_init_engine_symcrypt))
++                return 0;
++        }
++# endif
++    }
++
++
+ # ifndef OPENSSL_NO_STATIC_ENGINE
+ #  ifndef OPENSSL_NO_DEVCRYPTOENG
+     if ((opts & OPENSSL_INIT_ENGINE_CRYPTODEV)
+@@ -646,6 +750,17 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
+     }
+ #endif
+ 
++    int in_symcrypt_provider_init = CRYPTO_THREAD_get_local(&in_init_symcrypt_provider_local) != NULL;
++
++    // Skip re-entry
++    if (!in_symcrypt_provider_init) {
++        if (!CRYPTO_THREAD_set_local(&in_init_symcrypt_provider_local, (void *)-1))
++            return 0;
++
++        if (!RUN_ONCE(&provider_symcrypt, ossl_init_provider_symcrypt))
++            return 0;
++    }
++
+     if (!CRYPTO_atomic_or(&optsdone, opts, &tmp, optsdone_lock))
+         return 0;
+ 

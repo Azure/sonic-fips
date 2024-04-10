@@ -14,16 +14,16 @@ index c925d2c5a6..b1f587291c 100644
  }
 
 diff --git a/Configurations/unix-Makefile.tmpl b/Configurations/unix-Makefile.tmpl
-index 18255fd43b..c7a35265dd 100644
+index 18255fd43b..d0c50be5d0 100644
 --- a/Configurations/unix-Makefile.tmpl
 +++ b/Configurations/unix-Makefile.tmpl
-@@ -528,6 +528,9 @@ all: build_sw build_docs
- 
- test: tests
+@@ -530,6 +530,9 @@ test: tests
  {- dependmagic('tests'); -}: build_programs_nodep build_modules_nodep link-utils run_tests
-+	@ : {- output_off() if $disabled{tests}; "" -}
-+	( cd test; \
-+	  cp $(libdir)/symcryptengine.so ../$(BLDDIR)/engines/; )
  run_tests:
  	@ : {- output_off() if $disabled{tests}; "" -}
++	( cd test; \
++	  cp $(libdir)/engines-3/symcryptengine.so ../$(BLDDIR)/engines/; \
++	cp $(libdir)/ossl-modules/symcryptprovider.so ../$(BLDDIR)/providers/;)
  	( SRCTOP=$(SRCDIR) \
+ 	  BLDTOP=$(BLDDIR) \
+ 	  PERL="$(PERL)" \

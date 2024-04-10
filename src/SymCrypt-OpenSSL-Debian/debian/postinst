@@ -1,8 +1,0 @@
-#!/bin/bash
-
-# Override the Openssl config
-if [ ! -L /etc/ssl/openssl.cnf ] && [ -f /etc/ssl/openssl.cnf ]; then
-    mv -f /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.old
-fi
-
-ln -sf /etc/ssl/openssl-fips.cnf /etc/ssl/openssl.cnf
