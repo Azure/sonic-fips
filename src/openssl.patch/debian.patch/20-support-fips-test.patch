@@ -14,7 +14,7 @@ index c925d2c5a6..b1f587291c 100644
  }
 
 diff --git a/Configurations/unix-Makefile.tmpl b/Configurations/unix-Makefile.tmpl
-index 18255fd43b..d0c50be5d0 100644
+index 18255fd43b..24e2b778f3 100644
 --- a/Configurations/unix-Makefile.tmpl
 +++ b/Configurations/unix-Makefile.tmpl
 @@ -530,6 +530,9 @@ test: tests
@@ -23,7 +23,7 @@ index 18255fd43b..d0c50be5d0 100644
  	@ : {- output_off() if $disabled{tests}; "" -}
 +	( cd test; \
 +	  cp $(libdir)/engines-3/symcryptengine.so ../$(BLDDIR)/engines/; \
-+	cp $(libdir)/ossl-modules/symcryptprovider.so ../$(BLDDIR)/providers/;)
++	  cp $(libdir)/ossl-modules/symcryptprovider.so ../$(BLDDIR)/providers/;)
  	( SRCTOP=$(SRCDIR) \
  	  BLDTOP=$(BLDDIR) \
  	  PERL="$(PERL)" \
