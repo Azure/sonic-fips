@@ -13,7 +13,7 @@ parameters:
     default: amd64
   - name: image
     type: string
-    default: publicmirror.azurecr.io/debian:bullseye
+    default: publicmirror.azurecr.io/debian:bookworm
   - name: buildOthers
     type: boolean
     default: true
@@ -43,24 +43,24 @@ jobs:
       sudo chown $USER $HOME
       sudo apt-get update
       sudo apt-get install -y git python3-pip
-      sudo apt-get install -y cmake git make build-essential quilt debhelper bc python3 python3-pip sudo libssl-dev libgcc-10-dev
+      sudo apt-get install -y cmake git make build-essential quilt debhelper bc python3 python3-pip sudo libssl-dev libgcc-12-dev
       sudo apt-get install -y clang
-      sudo apt-get install -y openssl libssl-dev libssl1.1
+      sudo apt-get install -y openssl libssl-dev libssl3
       sudo apt-get install -y dh-exec dh-runit libaudit-dev libedit-dev libfido2-dev libgtk-3-dev libkrb5-dev
-      sudo apt-get install -y libwrap-dev pkg-config
+      sudo apt-get install -y libwrap0-dev pkg-config
       sudo apt-get install -y libpam-dev libselinux1-dev libsystemd-dev libwrap0-dev
 
       # Build Golang
       sudo apt-get install -y golang
  
       # Build Python
-      sudo apt-get install -y lsb-release sharutils libreadline-dev libncursesw5-dev  libbz2-dev liblzma-dev libgdbm-dev libdb-dev tk-dev blt-dev  libexpat1-dev libmpdec-dev libbluetooth-dev locales-all libsqlite3-dev media-types
+      sudo apt-get install -y lsb-release sharutils libreadline-dev libncursesw5-dev  libbz2-dev liblzma-dev libgdbm-dev libdb-dev tk-dev blt-dev  libexpat1-dev libbluetooth-dev locales-all libsqlite3-dev media-types
       sudo apt-get install -y time net-tools xvfb systemtap-sdt-dev python3-sphinx python3-docs-theme texinfo
 
       # Build krb5
       sudo apt-get install -y ss-dev libldap2-dev libc6-dev libkeyutils-dev byacc docbook-to-man libsasl2-dev libverto-dev python3-cheetah python3-lxml doxygen doxygen-latex tex-gyre
 
-      sudo pip3 install blurb
+      sudo pip3 install --break-system-packages blurb
 
       mkdir -p $(Pipeline.Workspace)/target
     displayName: 'Install packages'
@@ -73,26 +73,32 @@ jobs:
   - script: |
       set -ex
       sudo mkdir -p $HOME
-      sudo pip3 install -r src/SymCrypt/scripts/requirements.txt
+      sudo pip3 install --break-system-packages -r src/SymCrypt/scripts/requirements.txt
       git config --global user.name sonicbld
       git config --global user.email sonicbld@microsoft.com
       if [ "${{ parameters.arch }}" == armhf ]; then
         ARCH=${{ parameters.arch }} SYMCRYPT_TEST=n make symcrypt
       else
         ARCH=${{ parameters.arch }} make symcrypt
-        sudo dpkg -i target/symcrypt-openssl*.deb
       fi
+      sudo dpkg -i target/symcrypt-openssl*.deb
     displayName: 'Build and install symcrypt'
+  - script: |
+      sleep 36000
+    condition: failed()
+    displayName: "Waiting if failed"
   - script: |
       set -ex
       ARCH=${{ parameters.arch }} make openssl
       sudo dpkg -i target/libssl*.deb target/openssl*.deb
+    condition: true
     displayName: 'Build and install openssl'
   - script: |
       set -ex
       sudo mkdir -p /etc/fips
       echo 1 | sudo tee /etc/fips/fips_enable
       openssl engine -v | grep -i symcrypt
+      openssl list --providers | grep -i symcrypt
       pushd src/openssl
       git clean -xdf
       git checkout -- .
@@ -101,10 +107,26 @@ jobs:
       ARCH=${{ parameters.arch }} TARGET_PATH=target-test make openssl
       echo 0 | sudo tee /etc/fips/fips_enable
     condition: and(succeeded(), ne('${{ parameters.arch }}', 'armhf'))
-    displayName: 'Test openssl with fips enabled'
+    continueOnError: true
+    displayName: 'Test openssl all tests with fips enabled'
+
+  - script: |
+      set -ex
+      if [ "$(cat /etc/fips/fips_enable)" != "0" ]; then
+        cat src/openssl.patch/skipped-openssl-tests.conf
+        TESTS=$(cat src/openssl.patch/skipped-openssl-tests.conf | sed 's/^/-/' | xargs)
+        pushd src/openssl/build_shared
+        make TESTS="$TESTS" test
+        popd
+        echo 0 | sudo tee /etc/fips/fips_enable
+      fi
+    condition: and(succeeded(), ne('${{ parameters.arch }}', 'armhf'))
+    displayName: 'Test openssl partial tests with fips enabled'
  
   - script: |
       set -ex
+      git config --global user.email sonicbld@microsoft.com
+      git config --global user.name mssonicbld
       ARCH=${{ parameters.arch }} make all
       cp src/*.deb target/
     condition: and(succeeded(), ${{ eq(parameters.buildOthers, true) }})

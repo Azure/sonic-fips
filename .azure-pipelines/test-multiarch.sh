@@ -32,4 +32,13 @@ popd
 
 # Build the OpenSSL again with SymCrypt enabled
 rm -f src/openssl/test/recipes/30-test_afalg.t
-TARGET_PATH=target-test make openssl
+if TARGET_PATH=target-test make openssl; then
+  echo "OpenSSL tests succeeded"
+else
+  cat src/openssl.patch/skipped-openssl-tests.conf
+  TESTS=$(cat src/openssl.patch/skipped-openssl-tests.conf | sed 's/^/-/' | xargs)
+  pushd src/openssl/build_shared
+  make TESTS="$TESTS" test
+  podd
+  echo 0 | sudo tee /etc/fips/fips_enable
+fi

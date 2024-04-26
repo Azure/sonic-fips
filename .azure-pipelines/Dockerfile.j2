@@ -1,7 +1,7 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {%- if ARCH == "armhf" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-arm-6.1.0-8 as qemu
-FROM {{ prefix }}multiarch/debian-debootstrap:armhf-{{ DIST }}
+FROM --platform=linux/arm/v7 {{ prefix }}debian:{{ DIST }}
 COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
 {%- elif ARCH == "arm64" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-aarch64-6.1.0-8 as qemu
