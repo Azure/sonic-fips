@@ -30,7 +30,7 @@ Index: openssh/log.c
  }
  
 +#if defined(USE_SYMCRYPT_ENGINE)
-+void SCOSSL_ENGINE_set_trace_level(int trace_level);
++void SCOSSL_set_trace_level(int trace_level);
 +
 +void
 +symcrypt_engine_log_init(void)
@@ -57,7 +57,7 @@ Index: openssh/log.c
 +                default:
 +                        trace_level = 2;
 +        }
-+        SCOSSL_ENGINE_set_trace_level(trace_level);
++        SCOSSL_set_trace_level(trace_level);
 +}
 +#endif
 +

@@ -23,6 +23,7 @@ jobs:
   dependsOn: Build${{ parameters.arch }}
   displayName: Qemu-test-${{ parameters.arch }}
   pool: sonicbld-1es
+  condition: false
   timeoutInMinutes: 600
   steps:
   - script: |

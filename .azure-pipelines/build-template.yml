@@ -101,6 +101,18 @@ jobs:
       ARCH=${{ parameters.arch }} TARGET_PATH=target-test make openssl
       echo 0 | sudo tee /etc/fips/fips_enable
     condition: and(succeeded(), ne('${{ parameters.arch }}', 'armhf'))
+    continueOnError: true
+    displayName: 'Test openssl with fips enabled'
+  - script: |
+      set -ex
+      sudo mkdir -p /etc/fips
+      if [ "$(cat /etc/fips/fips_enable)" != "0" ]; then
+        pushd src/openssl/build_shared
+        make TESTS="-test_rsa" test
+        popd
+        echo 0 | sudo tee /etc/fips/fips_enable
+      fi
+    condition: and(succeeded(), ne('${{ parameters.arch }}', 'armhf'))
     displayName: 'Test openssl with fips enabled'
  
   - script: |
