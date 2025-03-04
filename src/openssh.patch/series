@@ -1,5 +1,4 @@
 0001-Put-style-as-line-number-to-ssh-session-environment-.patch
 0002-Revert-commit-69334996-make-sshd_config-ClientAliveC.patch
 0003-Export-remote-info-for-authorization.patch
-0004-Update-to-9.2p1-2+deb12u3.patch
 microsoft-symcrypt-fips.patch 
