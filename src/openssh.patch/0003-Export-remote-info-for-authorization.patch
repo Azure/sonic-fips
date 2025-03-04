@@ -1,7 +1,7 @@
-From 51b3d58afef6796fe0568deb4c3765e24cc828c9 Mon Sep 17 00:00:00 2001
+From 45f470393e0601b7001104cab0ed4be91412fa89 Mon Sep 17 00:00:00 2001
 From: liuh-80 <liuh@microsoft.com>
 Date: Fri, 30 Sep 2022 16:57:03 +0800
-Subject: [PATCH] Export remote info for authorization. authorization.
+Subject: [PATCH 3/3] Export remote info for authorization. authorization.
 
 ---
  auth.c    | 11 +++++++++++
@@ -11,10 +11,10 @@ Subject: [PATCH] Export remote info for authorization. authorization.
  4 files changed, 22 insertions(+)
 
 diff --git a/auth.c b/auth.c
-index c3693ba3f..96d551922 100644
+index 6653b9e15..a9a66c526 100644
 --- a/auth.c
 +++ b/auth.c
-@@ -764,3 +764,14 @@ auth_authorise_keyopts(struct ssh *ssh, struct passwd *pw,
+@@ -764,3 +764,14 @@ auth_restrict_session(struct ssh *ssh)
  		fatal_f("failed to restrict session");
  	sshauthopt_free(restricted);
  }
@@ -31,10 +31,10 @@ index c3693ba3f..96d551922 100644
 +}
 \ No newline at end of file
 diff --git a/auth.h b/auth.h
-index 3cfce0eaf..3a34742b1 100644
+index d16dc66b8..8b8765673 100644
 --- a/auth.h
 +++ b/auth.h
-@@ -229,6 +229,9 @@ struct passwd *fakepw(void);
+@@ -241,6 +241,9 @@ FILE	*auth_openprincipals(const char *, struct passwd *, int);
  
  int	 sys_auth_passwd(struct ssh *, const char *);
  
@@ -45,7 +45,7 @@ index 3cfce0eaf..3a34742b1 100644
  krb5_error_code ssh_krb5_cc_gen(krb5_context, krb5_ccache *);
  #endif
 diff --git a/session.c b/session.c
-index a638ceef1..c615cb3d0 100644
+index 768d3b3bb..40f3c4110 100644
 --- a/session.c
 +++ b/session.c
 @@ -619,6 +619,9 @@ do_exec_pty(struct ssh *ssh, Session *s, const char *command)
@@ -59,10 +59,10 @@ index a638ceef1..c615cb3d0 100644
  #ifndef HAVE_OSF_SIA
  		do_login(ssh, s, command);
 diff --git a/sshd.c b/sshd.c
-index 3ef0c1452..2f67a0304 100644
+index dd8fd94a3..8f184a372 100644
 --- a/sshd.c
 +++ b/sshd.c
-@@ -1737,6 +1737,8 @@ main(int ac, char **av)
+@@ -1735,6 +1735,8 @@ main(int ac, char **av)
  			test_flag = 2;
  			break;
  		case 'C':
@@ -71,7 +71,7 @@ index 3ef0c1452..2f67a0304 100644
  			connection_info = get_connection_info(ssh, 0, 0);
  			if (parse_server_match_testspec(connection_info,
  			    optarg) == -1)
-@@ -2252,6 +2254,9 @@ main(int ac, char **av)
+@@ -2263,6 +2265,9 @@ main(int ac, char **av)
  	 */
  	remote_ip = ssh_remote_ipaddr(ssh);
  
@@ -82,5 +82,5 @@ index 3ef0c1452..2f67a0304 100644
  	audit_connection_from(remote_ip, remote_port);
  #endif
 -- 
-2.35.1.windows.2
+2.43.0
 

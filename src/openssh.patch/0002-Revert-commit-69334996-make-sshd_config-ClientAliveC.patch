@@ -1,7 +1,7 @@
-From 2bc575c74aa811a60682e989d07675b8e7ac8a12 Mon Sep 17 00:00:00 2001
+From 80a01a39dbd7a2222e30adf00f6d5019b1f4bba7 Mon Sep 17 00:00:00 2001
 From: Saikrishna Arcot <sarcot@microsoft.com>
 Date: Thu, 13 Oct 2022 13:45:17 -0700
-Subject: [PATCH] Revert commit 69334996: make
+Subject: [PATCH 2/3] Revert commit 69334996: make
  sshd_config:ClientAliveCountMax=0 disable the connection-killing behavior
 
 SONiC (and others) use this feature to kill connections when the session
@@ -16,10 +16,10 @@ Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
  2 files changed, 1 insertion(+), 5 deletions(-)
 
 diff --git a/serverloop.c b/serverloop.c
-index 48d936d..1b30498 100644
+index 6db0916d8..6ab7e2312 100644
 --- a/serverloop.c
 +++ b/serverloop.c
-@@ -184,8 +184,7 @@ client_alive_check(struct ssh *ssh)
+@@ -134,8 +134,7 @@ client_alive_check(struct ssh *ssh)
  	int r, channel_id;
  
  	/* timeout, check to see how many we have had */
@@ -30,10 +30,10 @@ index 48d936d..1b30498 100644
  		sshpkt_fmt_connection_id(ssh, remote_id, sizeof(remote_id));
  		logit("Timeout, client not responding from %s", remote_id);
 diff --git a/sshd_config.5 b/sshd_config.5
-index a555e7e..a5815d3 100644
+index 8e0b58ebf..9d1392f24 100644
 --- a/sshd_config.5
 +++ b/sshd_config.5
-@@ -545,9 +545,6 @@ is set to 15, and
+@@ -621,9 +621,6 @@ is set to 15, and
  .Cm ClientAliveCountMax
  is left at the default, unresponsive SSH clients
  will be disconnected after approximately 45 seconds.
@@ -44,5 +44,5 @@ index a555e7e..a5815d3 100644
  Sets a timeout interval in seconds after which if no data has been received
  from the client,
 -- 
-2.25.1
+2.43.0
 
